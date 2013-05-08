@@ -1,6 +1,6 @@
 ﻿//Title: Custom DropDown plugin by PC
 //Documentation: http://designwithpc.com/Plugins/ddslick
-//Author: PC 
+//Author: PC
 //Website: http://designwithpc.com
 //Twitter: http://twitter.com/chaudharyp
 
@@ -32,7 +32,9 @@
         showSelectedHTML: true,
         clickOffToClose: true,
 		embedCSS: true,
-        onSelected: function () { }
+        onSelected: function () {},
+        onOpen: function () {},
+        onClose: function () {}
     },
 
     ddSelectHtml = '<div class="dd-select"><input class="dd-selected-value" type="hidden" /><a class="dd-selected"></a><span class="dd-pointer dd-pointer-down"></span></div>',
@@ -56,12 +58,12 @@
                 '.dd-image-right { float:right; margin-right:15px; margin-left:5px;}' +
                 '.dd-container{ position:relative;}​ .dd-selected-text { font-weight:bold}​</style>';
 
-    //Public methods 
+    //Public methods
     methods.init = function (options) {
         //Preserve the original defaults by passing an empty object as the target
         //The object is used to get global flags like embedCSS.
-        var options = $.extend({}, defaults, options);
-        
+        var options = $.extend(defaults, options);
+
         //CSS styles are only added once.
 	    if ($('#css-ddslick').length <= 0 && options.embedCSS) {
 	        $(ddslickCSS).appendTo('head');
@@ -69,10 +71,10 @@
 
         //Apply on all selected elements
         return this.each(function () {
-            //Preserve the original defaults by passing an empty object as the target 
+            //Preserve the original defaults by passing an empty object as the target
             //The object is used to save drop-down's corresponding settings and data.
-            var options = $.extend({}, defaults, options);
-            
+            var options = $.extend(defaults, options);
+
             var obj = $(this),
                 data = obj.data('ddslick');
             //If the plugin has not been initialized yet
@@ -152,6 +154,7 @@
                     var index = (options.defaultSelectedIndex != null && options.defaultSelectedIndex >= 0 && options.defaultSelectedIndex < options.data.length)
                                 ? options.defaultSelectedIndex
                                 : 0;
+                    // FIXME: This triggers initial open/close event.
                     selectIndex(obj, index);
                 }
 
@@ -172,6 +175,10 @@
                     obj.on('click.ddslick', function (e) { e.stopPropagation(); });
                     $('body').on('click', function () {
                         $('.dd-click-off-close').slideUp(50).siblings('.dd-select').find('.dd-pointer').removeClass('dd-pointer-up');
+                        //Callback function on close
+                        if (typeof pluginData.settings.onClose == 'function') {
+                            pluginData.settings.onClose.call(this);
+                        }
                     });
                 }
             }
@@ -195,8 +202,9 @@
                 pluginData = $this.data('ddslick');
 
             //Check if plugin is initialized
-            if (pluginData)
+            if (pluginData) {
                 open($this);
+            }
         });
     };
 
@@ -207,8 +215,9 @@
                 pluginData = $this.data('ddslick');
 
             //Check if plugin is initialized
-            if (pluginData)
+            if (pluginData) {
                 close($this);
+            }
         });
     };
 
@@ -225,13 +234,13 @@
             }
         });
     }
-    
+
      //Private: Select id
     function selectId(obj, id) {
-    
+
        var index = obj.find(".dd-option-value[value= '" + id + "']").parents("li").prevAll().length;
        selectIndex(obj, index);
-       
+
     }
 
     //Private: Select index
@@ -292,11 +301,13 @@
 
     //Private: Close the drop down options
     function open(obj) {
+        var pluginData = obj.data('ddslick');
 
         var $this = obj.find('.dd-select'),
             ddOptions = $this.siblings('.dd-options'),
             ddPointer = $this.find('.dd-pointer'),
-            wasOpen = ddOptions.is(':visible');
+            wasOpen = ddOptions.is(':visible'),
+            settings = pluginData.settings;
 
         //Close all open options (multiple plugins) on the page
         $('.dd-click-off-close').not(ddOptions).slideUp(50);
@@ -305,21 +316,38 @@
         if (wasOpen) {
             ddOptions.slideUp('fast');
             ddPointer.removeClass('dd-pointer-up');
+            if (typeof settings.onClose == 'function') {
+                settings.onClose.call(this);
+            }
         }
         else {
             ddOptions.slideDown('fast');
             ddPointer.addClass('dd-pointer-up');
+            if (typeof settings.onOpen == 'function') {
+                settings.onOpen.call(this);
+            }
         }
 
         //Fix text height (i.e. display title in center), if there is no description
         adjustOptionsHeight(obj);
+
+        //Callback function on open
+
     }
 
     //Private: Close the drop down options
     function close(obj) {
+        var pluginData = obj.data('ddslick');
+        var settings = pluginData.settings;
+
         //Close drop down and adjust pointer direction
         obj.find('.dd-options').slideUp(50);
         obj.find('.dd-pointer').removeClass('dd-pointer-up').removeClass('dd-pointer-up');
+
+        //Callback function on close
+        if (typeof settings.onClose == 'function') {
+            settings.onClose.call(this);
+        }
     }
 
     //Private: Adjust appearence for selected option (move title to middle), when no desripction
